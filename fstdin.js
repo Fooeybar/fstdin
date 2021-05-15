@@ -10,7 +10,7 @@ const clrB=(int)=>{
     return '';
 };
 const numbers=['0','1','2','3','4','5','6','7','8','9'];
-const keyconf={sequence:'',name:'',ctrl:false,meta:false,shift:false,func:function noop(){}};
+const keyconf={name:'',ctrl:false,meta:false,shift:false,func:function noop(){}};
 const cmdconf={name:'',about:'',func:function(){}};
 const stdconf={
     process:process
@@ -42,7 +42,7 @@ const stdconf={
     ,file:''
     ,nullHelpMsg:true
 };
-const stdin=(conf=stdconf)=>{
+const fstdin=(conf=stdconf)=>{
     if(conf!==stdconf){
         if(conf.process){
             if(conf.stdout===undefined)conf.stdout=conf.process.stdout;
@@ -447,7 +447,7 @@ const stdin=(conf=stdconf)=>{
             if(typeof(key)==='string'&&data===undefined)data=makeKey(data);
             else if(typeof(key)==='object')data=makeKey(key);
             key=getKey(data);
-            if(key!==undefined)key.func(data);
+            if(key!==undefined)key.func();
             else{
                 lastCursor=0;
                 last[lastCursor]+=(data.sequence!=='')?data.sequence:data.name;
@@ -457,7 +457,7 @@ const stdin=(conf=stdconf)=>{
         };
         let addKey=(obj)=>{
                 let key=makeKey(obj);
-                if(getKey(key)===undefined)keys.push(key);
+                if(getKey(key)===undefined&&key.name!=='')keys.push(key);
         };
         let delKey=(obj)=>{
             let key=makeKey(obj);
@@ -483,7 +483,7 @@ const stdin=(conf=stdconf)=>{
             else if(config.nullHelpMsg===true){
                 let msg='\n   '+clrF(11)+'»'+clrF(7)+' Press '+clrF(5)+'Up '+clrF(7)+'or '+clrF(5)+'Down '+clrF(7)+'to scroll the current stdin entries\n   '+
                 clrF(11)+'?'+clrF(7)+' Entries are previous inputs or commands inserted with \''+clrF(6)+config.flagInsert+clrF(7)+'\'\n   '+
-                clrF(11)+'»'+clrF(7)+' Type \''+clrF(6)+config.systemPrefix+' -a'+clrF(7)+'\' & return to see a list of gui cmd trees with info\n   '+
+                clrF(11)+'»'+clrF(7)+' Type \''+clrF(6)+config.systemPrefix+' -a'+clrF(7)+'\' & return to see a list of system cmd trees with info\n   '+
                 clrF(11)+'»'+clrF(7)+' Type \''+clrF(6)+' -a'+clrF(7)+'\' & return to see a list of user cmd trees with info\n   '+
                 clrF(11)+'+'+clrF(7)+' With \''+clrF(6)+config.flagSubCmds+clrF(7)+'\' '+'to include sub-commands\n';
                 config.stdout.write(msg+'\x1b[0m\n');
@@ -576,7 +576,7 @@ const stdin=(conf=stdconf)=>{
         //===========================================================================================================
         updateDisplay(0);
         return{
-             command:function(string=''){for(let i=0;i<arguments.length;i++)cmd(arguments[i]);}
+            command:function(string=''){for(let i=0;i<arguments.length;i++)cmd(arguments[i]);}
             ,addCommand:function(obj=cmdconf){for(let i=0;i<arguments.length;i++)addCmd(arguments[i]);}
             ,delCommand:function(name=''){for(let i=0;i<arguments.length;i++)delCmd(arguments[i]);}
             ,key:function(obj=keyconf){for(let i=0;i<arguments.length;i++)key(arguments[i]);}
@@ -586,4 +586,4 @@ const stdin=(conf=stdconf)=>{
     }
 };
 //===========================================================================================================sdg
-module.exports=(config=stdconf)=>stdin(config);
+module.exports=(config=stdconf)=>fstdin(config);

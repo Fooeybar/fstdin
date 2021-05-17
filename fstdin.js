@@ -37,7 +37,7 @@ const stdconf={
     ,maxEntries:100
     ,showCursor:true
     ,displayCmdCall:true
-    ,exitOnError:false
+    ,exitOnError:true
     ,onExit:function(code){}
     ,file:''
     ,nullHelpMsg:true
@@ -545,7 +545,7 @@ const fstdin=(conf=stdconf)=>{
             func=((ret)=>{
                 return function(code=config.process.exitCode){
                     config.process.exitCode=code;
-                    if(typeof(config.onExit)!=='function')config.onExit(code);
+                    if(typeof(config.onExit)==='function')config.onExit(code);
                     config.stdout.fstdinwrite(`\x1B[2K\x1b[${config.stdout.columns}D\x1b[0m`);
                     ret(...arguments);
                 }

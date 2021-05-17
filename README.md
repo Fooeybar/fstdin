@@ -96,7 +96,7 @@ Triggering keys with `fstdin.key(object||string,...)` is the equivalent of press
 
 </br>
 
-Command trees are similar to a directory tree, using whitespace `' '` as the path separator</br>
+Command trees are similar to a file directory tree, using whitespace `' '` as the path separator</br>
 
 **Adding commands with** `fstdin.addCommand(object,...)`**:**</br>
 - The prototype object argument:
@@ -122,7 +122,7 @@ During runtime, the fstdin input acts as a command **call** or **search**:
 - To **search** commands, input:
     - whitespace `' '` to search all commands
     - a portion of a command path
-    - or a command tree with any flag included
+    - any flag included
     - optional flags
         - about: `-a`: returns a description of the command
         - subcmds: `-s`: includes sub-commands in the command search/call
@@ -144,6 +144,6 @@ During runtime, the fstdin input acts as a command **call** or **search**:
 - The sub-command for setting the text color is: `.text color`
 - To **call** the color sub-command, input:`.text color 4`
     - The color sub-command takes an integer as input
-    - Has no sub-commands and will always be **called** if the 'about' or 'insert' flag is not included
+    - Has no sub-commands and will always be **called** if any flag is not included
 
 </br>

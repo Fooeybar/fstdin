@@ -1,6 +1,6 @@
 {
   "name": "fstdin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Add terminal commands and key bindings to your Node project",
   "main": "fstdin.js",
   "scripts": {

@@ -1,7 +1,7 @@
 {
   "name": "fstdin",
-  "version": "0.0.3",
-  "description": "Add terminal commands and key bindings to your Node project",
+  "version": "0.1.0",
+  "description": "Simple stdin line control + prompts",
   "main": "fstdin.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,11 +11,12 @@
     "url": "git+https://github.com/Fooeybar/fstdin.git"
   },
   "keywords": [
-    "stdin",
-    "terminal",
-    "commands",
-    "key",
-    "bindings"
+     "stdin"
+    ,"terminal"
+    ,"key"
+    ,"keypress"
+    ,"readline"
+    ,"input"
   ],
   "author": "Fooeybar",
   "license": "MIT",

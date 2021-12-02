@@ -69,10 +69,13 @@ Add color to your prompt line using `font()` & `back()`</br>
 Include the property `root:true` to set a prompt as the root prompt. A root prompt acts like a current working directory prompt:</br>
 
 ```
-.prompt({
+.prompt(proot={
      line:process.cwd()
     ,root:true
-    ,func:(res)=>console.log(process.cwd()+res)
+    ,func:(res)=>{
+        console.log(process.cwd()+res);
+        proot.line=process.cwd();
+    }
 });
 ```
 

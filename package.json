@@ -1,6 +1,6 @@
 {
   "name": "fstdin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Simple stdin line control + prompts",
   "main": "fstdin.js",
   "scripts": {
@@ -17,6 +17,9 @@
     ,"keypress"
     ,"readline"
     ,"input"
+    ,"cli"
+    ,"process"
+    ,"stdout"
   ],
   "author": "Fooeybar",
   "license": "MIT",

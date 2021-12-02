@@ -60,7 +60,23 @@ Without a `.func()` property, the prompt will be passable using any key.</br>
 Press `escape` to skip a prompt.</br>
 
 Add color to your prompt line using `font()` & `back()`</br>
-- `line=font(2)+back(3)+'This is my prompt line'`
+- `line=font(2)+back(3)+'This is my prompt line'`</br>
+
+</br>
+
+### Root Prompt
+
+Include the property `root:true` to set a prompt as the root prompt. A root prompt acts like a current working directory prompt:</br>
+
+```
+.prompt({
+     line:process.cwd()
+    ,root:true
+    ,func:(res)=>console.log(process.cwd()+res)
+});
+```
+
+The root prompt will occur when no other prompts are active.
 
 </br>
 

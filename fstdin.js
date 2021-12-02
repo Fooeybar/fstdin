@@ -105,16 +105,12 @@ const fstdin=(config=stdconst)=>{
             for(let i=0;i<queries.length;i++){
                 if(typeof(queries[i])==='object'&&typeof(queries[i].line)==='string'
                     &&queries[i].line.length>0){
-                     let obj={
-                         line:queries[i].line
-                         ,any:(typeof(queries[i].func)==='function')?false:true
-                         ,func:queries[i].func
-                         ,new:1
-                         ,newpos:[]
-                     };
-                     for(let j=obj.line.length-1;j>=0;j--)if(obj.line[j]==='\n'){obj.new++;obj.newpos[obj.newpos.length++]=j;}
-                     if(queries[i].root===true){proot=obj;prmt[prmt.length++]=proot;}
-                     else prmt[prmt.length++]=obj;
+                     queries[i].any=(typeof(queries[i].func)==='function')?false:true;
+                     queries[i].new=1;
+                     queries[i].newpos=[];
+                     for(let j=queries[i].line.length-1;j>=0;j--)if(queries[i].line[j]==='\n'){queries[i].new++;queries[i].newpos[queries[i].newpos.length++]=j;}
+                     if(queries[i].root===true){proot=queries[i];prmt[prmt.length++]=queries[i];}
+                     else prmt[prmt.length++]=queries[i];
                      out++;
                  }
             }

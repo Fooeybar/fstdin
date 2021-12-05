@@ -179,7 +179,7 @@ const fstdin=(config=stdconst)=>{
                 if(curr.line.length>0&&hist[hist.length-2]!==curr.line){
                     hist[hpos++]=curr.line;
                     hist[hpos]='';
-                    if(hist.length>config.history)hist.splice(0,1);
+                    if(hist.length>config.history+1)hist.splice(0,hist.length-config.history-1);
                 }
                 if(ppos>-1)popPrompt();
                 else if(curr.line.length>0){

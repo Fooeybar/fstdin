@@ -1,6 +1,6 @@
 {
   "name": "fstdin",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Simple stdin line control + prompts",
   "main": "fstdin.js",
   "scripts": {

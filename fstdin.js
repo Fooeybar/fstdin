@@ -53,7 +53,7 @@ const fstdin=(config=stdconst)=>{
                         if(config.process.stdout.columns-1<=last+curr.line.length)extcolumns=last;
                     }
                     else if(config.process.stdout.columns-1<=pline.length+curr.line.length)extcolumns=pline.length;
-                    disp=pline;
+                    disp=clrf(prmt[ppos].font)+pline;
                 }
                 else curr=std;
                 disp+=clrf(config.textClr)
@@ -220,7 +220,7 @@ const fstdin=(config=stdconst)=>{
                 keyme(arguments[i]);
             }
         };
-        config.prompt=function(query={line:'',func:(res)=>{}}){
+        config.prompt=function(query={line:'',font:config.textClr,func:(res)=>{}}){
             return promptme(Array.from(arguments));
         };
         config.font=function(int=0){return clrf(int);}

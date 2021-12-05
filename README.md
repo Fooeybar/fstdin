@@ -57,10 +57,18 @@ Prompts are entered as an object:
 
 Without a `.func()` property, the prompt will be passable using any key.</br>
 
+Prompt lines longer than the terminal columns will be split with `'\n'`</br>
+
 Press `escape` to skip a prompt.</br>
 
-Add color to your prompt line using `font()` & `back()`</br>
-- `line=font(2)+back(3)+'This is my prompt line'`</br>
+</br>
+
+### Coloring
+
+Add color to your prompt line using the `.font` property:</br>
+- `prompt({line:'This line is yellow!',font:11})`</br>
+
+It is advised not to pre-color the prompt line, as this might interfere with the overflow new-line.
 
 </br>
 

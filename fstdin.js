@@ -53,7 +53,7 @@ const fstdin=(config=stdconst)=>{
                         if(config.process.stdout.columns-1<=last+curr.line.length)extcolumns=last;
                     }
                     else if(config.process.stdout.columns-1<=pline.length+curr.line.length)extcolumns=pline.length;
-                    disp=clrf(prmt[ppos].font)+pline;
+                    disp=clrf(prmt[ppos].font||config.textClr)+pline;
                 }
                 else curr=std;
                 disp+=clrf(config.textClr)

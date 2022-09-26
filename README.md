@@ -7,7 +7,17 @@ Made with ![linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColo
 
 </br>
 
-Simple stdin line control + prompts
+Simple terminal interface + prompts
+
+</br>
+
+- [Initialization](#initialization)
+- [Prompts](#prompts)
+- [Root Prompt](#root-prompt)
+- [Masking](#masking)
+- [Colouring](#coloring)
+- [Keys](#keys)
+- [Shortcut Keys](#shortcut-keys)
 
 </br>
 
@@ -17,31 +27,40 @@ Simple stdin line control + prompts
 
 </br>
 
-
 `fstdin=require('fstdin')({config});`</br>
 
 </br>
 
 Any config properties `undefined` or `typeof!==` will default to the values listed below:</br>
 
-- `.process: process`
-- `.textClr: 15`
-- `.curClr: 8`
-- `.history: 100`
-- `.escape: '\x1b'`
-- `.onExit: function(code=0)`
-- `.onLine: function(line='')`
-- `.onKey: function(key={sequence:'',name:'',ctrl:false,meta:false,shift:false})`
+```
+config={
+    text_color : 15
+   ,cursor_color : 15
+   ,input_history : 50
+   ,escape : '\x1b'
+   ,mask_char : '*'
+   ,on_exit : function(code=0){}
+   ,on_line : function(line=''){}
+   ,on_key : function(key={sequence:'',name:'',ctrl:false,meta:false,shift:false}){}
+}
+```
 
 </br>
 
-Returns the config object with the added properties:</br>
+Returns an object with the properties:</br>
 
-- `.line: '' //Read-only current stdin`
-- `.key: function(str||obj,...) //Trigger keys`
-- `.prompt: function(obj,...) //Prompt user`
-- `.font: function(int) //Returns color code string`
-- `.back: function(int) //Returns color code string`
+```
+fstdin()={
+    line : ''                           //Read-only current stdin
+    ,key : function(string||object,...) //Trigger keys
+    ,prompt : function(object,...)      //Prompt user
+}
+```
+
+</br>
+
+Change the config by calling the fstdin function with new config settings.
 
 </br>
 
@@ -51,43 +70,108 @@ Returns the config object with the added properties:</br>
 
 </br>
 
-Prompts are entered as an object:
-- `prompt({line:'Press any key to continue...'},{line:'Hiya!'})`</br>
-- `prompt({line:'What is your name?',func:(res)=>{}})`</br>
+Prompts are entered as an object:</br>
 
-Without a `.func()` property, the prompt will be passable using any key.</br>
+```
+prompt({
+    line : 'What is your name?'
+    ,any_key : true
+})
+```
 
-Prompt lines longer than the terminal columns will be split with `'\n'`</br>
+The prompt function will take multiple prompts as arguments:</br>
 
-Press `escape` to skip a prompt.</br>
+```
+prompt(
+    {line : 'Hiya!', any_key : true}
+    ,{line : 'Hello!', any_key : true}
+    ,{line : 'Hi!', any_key : true}
+    ,{line : 'Howdy!', any_key : true}
+)
+```
 
 </br>
 
-### Coloring
+Prompt lines longer than the terminal columns will be split with `'\n'`.</br>
 
-Add color to your prompt line using the `.font` property:</br>
-- `prompt({line:'This line is yellow!',font:11})`</br>
+Prompt response input longer than the terminal columns will scroll to the right.</br>
 
-It is advised not to pre-color the prompt line, as this might interfere with the overflow new-line.
+Press `escape` to skip a prompt. The `prompt.func(res,esc)` will still be called, with `res=''` and `esc=true`.
+
+</br>
+
+Any prompt properties `undefined` or `typeof!==` will default to the values listed below:</br>
+
+```
+prompt={
+    line : ''
+    ,any_key : false
+    ,color : 15
+    ,root : false
+    ,mask : false
+    ,func : (response='',escape=false)=>{}
+}
+```
 
 </br>
 
 ### Root Prompt
 
-Include the property `root:true` to set a prompt as the root prompt. A root prompt acts like a current working directory prompt:</br>
+Include the property `root:true` to set a prompt as the root prompt. The root prompt will repeatedly occur when no other prompts are active.</br>
+
+An example as a working directory prompt:</br>
 
 ```
 .prompt(proot={
-     line:process.cwd()
+     line:process.cwd()+'~ '
     ,root:true
     ,func:(res)=>{
-        console.log(process.cwd()+res);
-        proot.line=process.cwd();
+        console.log(process.cwd()+'~ '+res);
+        proot.line=process.cwd()+'~ ';
     }
 });
 ```
 
-The root prompt will occur when no other prompts are active.
+</br>
+
+### Masking
+
+Include the property `mask:true` to mask the input for that prompt.</br>
+
+During a masked prompt, only the `config.mask_char` will be:</br>
+
+- displayed in the terminal
+- sent in `on_line(res)`
+- recorded in input history
+- recorded in the read-only line `{ line } = fstdin()`
+
+Additionally, the following shortcuts are disabled and function not called:
+
+- Undo `ctrl+z`
+- Redo `ctrl+y`
+- scroll input history `up`
+- scroll input history `down`
+- `config.on_key(key)`
+
+Unmasked input can only be read in the `prompt.func(res,esc)` call:</br>
+
+```
+.prompt({
+    line: 'Are you a Led Zeppelin fan?'
+    ,mask: true
+    ,func: (res,esc)=>{
+        if(esc)console.log('Why no answer?'); //res.length==0
+        else console.log(`So your answer is: ${res}`);
+    }
+});
+```
+
+</br>
+
+### Coloring
+
+Add color to your prompt line using the `.color` property:</br>
+- `prompt({line:'This line is yellow!',color:11})`</br>
 
 </br>
 
@@ -100,7 +184,19 @@ The root prompt will occur when no other prompts are active.
 Keys are either an object `{name:'c',ctrl:true} //ctrl+c (end process)`</br>
 Or may also be entered as strings when using `.key(key,...)`</br>
 
-Triggering keys with `.key(key,..)` is the equivalent of pressing the key(s) at runtime in the terminal, however, this will not trigger the `.onKey(key)` function.
+Triggering keys with `.key(key,..)` is the equivalent of pressing the key(s) at runtime, however, this will not trigger the `.on_key(key)` function.</br>
+
+The `on_key(key)` will send an object when a key is physically pressed:</br>
+
+```
+key={
+    name: ''
+    ,sequence : ''
+    ,ctrl : false
+    ,meta : false
+    ,shift : false
+}
+```
 
 </br>
 

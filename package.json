@@ -1,7 +1,7 @@
 {
   "name": "fstdin",
-  "version": "0.2.5",
-  "description": "Simple stdin line control + prompts",
+  "version": "0.3.0",
+  "description": "Simple terminal interface + prompts",
   "main": "fstdin.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,6 +20,7 @@
     ,"cli"
     ,"process"
     ,"stdout"
+    ,"interface"
   ],
   "author": "Fooeybar",
   "license": "MIT",

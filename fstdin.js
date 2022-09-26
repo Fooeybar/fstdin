@@ -1,232 +1,499 @@
-const stdconst={
-    process:process
-   ,textClr:15
-   ,cursorClr:8
-   ,history:100
+const std_config={
+    text_color:15
+   ,cursor_color:15
+   ,input_history:50
    ,escape:'\x1b'
-   ,onExit:function(code=0){}
-   ,onLine:function(line=''){}
-   ,onKey:function(key={sequence:'',name:'',ctrl:false,meta:false,shift:false}){}
+   ,mask_char:'*'
+   ,on_exit:function(code=0){}
+   ,on_line:function(line=''){}
+   ,on_key:function(key={sequence:'',name:'',ctrl:false,meta:false,shift:false}){}
 };
-const fstdin=(config=stdconst)=>{
-    if(config!==stdconst)for(let i in stdconst)if(config[i]===undefined||typeof(config[i])!==typeof(stdconst[i]))config[i]=stdconst[i];
-    let Emitter=require("events").EventEmitter;
-    if((config.process instanceof Emitter&&typeof(config.process.exit)==='function')
-    &&(config.process.stdout instanceof Emitter&&typeof(config.process.stdout.write)==='function')
-    &&(config.process.stdin instanceof Emitter&&typeof(config.process.stdin.read)==='function')){
-        let clrf=(int=0)=>(0<=int&&int<256)?`${config.escape}[38;5;${int}m`:config.escape+'[0m';
-        let clrb=(int=0)=>(0<=int&&int<256)?`${config.escape}[48;5;${int}m`:config.escape+'[0m';
-        //===========================================================================================================
-        let disp=clrb(config.cursorClr)+' '+config.escape+'[0m',clear=config.escape+'[2K',hist=[''],hpos=0,prmt=[],ppos=-1,keyflag=false
-            ,std={line:'',undo:[''],upos:0},prm={line:'',undo:[''],upos:0};
-        let curr=std,proot=undefined;
-        //===========================================================================================================
-        let render=(before=false)=>{
-            if(!keyflag){
-                let extclear=0,extcolumns=0;
-                disp='';
-                if(-1<ppos){
-                    curr=prm;
-                    let pline=prmt[ppos].line;
-                    if(prmt[ppos].new>1){
-                        for(let i=prmt[ppos].newpos.length-1,oldpos=i;i>=0;i--){
-                            let temppos=prmt[ppos].newpos[i]-oldpos;
-                            let num=Math.floor((temppos)/(config.process.stdout.columns-1));
-                            extclear+=num;
-                            oldpos=prmt[ppos].newpos[i];
-                        }
-                        if(config.process.stdout.columns-1<=pline.length-prmt[ppos].newpos[0]+curr.line.length)extcolumns=pline.length-prmt[ppos].newpos[0];
-                    }
-                    else if(config.process.stdout.columns-1<=prmt[ppos].line.length){
-                        let last=0;
-                        pline='';
-                        for(let i=0,mark=0;i<prmt[ppos].line.length;i++){
-                            if(i-mark===config.process.stdout.columns-1){
-                                pline+='\n';
-                                extclear++;
-                                mark=i;
-                                last=0;
-                            }
-                            pline+=prmt[ppos].line[i];
-                            last++;
-                        }
-                        if(config.process.stdout.columns-1<=last+curr.line.length)extcolumns=last;
-                    }
-                    else if(config.process.stdout.columns-1<=pline.length+curr.line.length)extcolumns=pline.length;
-                    disp=clrf(prmt[ppos].font||config.textClr)+pline;
-                }
-                else curr=std;
-                disp+=clrf(config.textClr)
-                    +((config.process.stdout.columns-extcolumns-1>curr.line.length)?curr.line:curr.line.substring(curr.line.length-config.process.stdout.columns+1+extcolumns))
-                    +clrb(config.cursorClr)+' '+config.escape+'[0m';
-                setUndo();
-                if(curr.line.length>0&&hpos===hist.length-1)hist[hist.length-1]=curr.line;
-                config.line=curr.line;
-                if(before===true){
-                    config.process.stdout.write(clrf(config.textClr)+hist[hist.length-2]+'\n',(err)=>{
-                        if(err)console.error(err);
-                        else{
-                            if(typeof(config.onLine)==='function')config.onLine(hist[hist.length-2]);
-                            setClear((-1<ppos)?prmt[ppos].new+extclear:1);
-                        }
-                    });
-                }
-                else config.process.stdout.write('',(err)=>{
-                    if(err)console.error(err);
-                    else setClear((-1<ppos)?prmt[ppos].new+extclear:1);
-                });
-            }
-        };
-        let setClear=(int)=>{
-            clear=config.escape+'[2K';
-            while(1<int--)clear+=config.escape+'[1A'+config.escape+'[2K';
-        };
-        let scrollHist=(int)=>{
-            hpos+=int;
-            if(hpos<0)hpos=0;
-            else if(hist.length-1<hpos)hpos=hist.length-1;
-            curr.line=hist[hpos];
-            render();
-        };
-        let setUndo=()=>{
-            if(hpos<hist.length-1){if(curr.line!==hist[hpos])curr.undo[++curr.upos]=curr.line;}
-            else{if(curr.line!==curr.undo[curr.upos])curr.undo[++curr.upos]=curr.line;}
-        };
-        let redo=(int)=>{
-            curr.upos+=int;
-            if(curr.undo.length-1<curr.upos)curr.upos=curr.undo.length-1;
-            else if(curr.upos<0)curr.upos=0;
-            curr.line=curr.undo[curr.upos];
-            hpos=hist.length-1;
-            render();
-        };
-        let promptme=(queries=[])=>{
-            let out=0;
-            for(let i=0;i<queries.length;i++){
-                if(typeof(queries[i])==='object'&&typeof(queries[i].line)==='string'
-                    &&queries[i].line.length>0){
-                     queries[i].any=(typeof(queries[i].func)==='function')?false:true;
-                     queries[i].new=1;
-                     queries[i].newpos=[];
-                     for(let j=queries[i].line.length-1;j>=0;j--)if(queries[i].line[j]==='\n'){queries[i].new++;queries[i].newpos[queries[i].newpos.length++]=j;}
-                     if(queries[i].root===true){proot=queries[i];prmt[prmt.length++]=queries[i];}
-                     else prmt[prmt.length++]=queries[i];
-                     out++;
-                 }
-            }
-            if(prmt.length>0){
-                if(ppos===-1)ppos=0;
-                else if(prmt[ppos]===proot){
-                    ppos++;
-                    prm={line:'',undo:[''],upos:0};
-                }
-                render();
-            }
-            return out;
-        };
-        let popPrompt=(esc=false)=>{
-            let line=prm.line;
-            prm={line:'',undo:[''],upos:0};
-            if((!esc&&typeof(prmt[ppos].func)==='function'))prmt[ppos].func(line);
-            if(++ppos===prmt.length){
-                prmt.length=0;
-                if(proot!==undefined){
-                    prmt[prmt.length++]=proot;
-                    ppos=0;
-                }
-                else ppos=-1;
-            }
-            render();
-        };
-        let keyme=(ch,key)=>{
-            if(key===undefined){
-                if(typeof(ch)==='string'||typeof(ch)==='number')key={name:''+ch,sequence:''+ch,ctrl:false,meta:false,shift:false};
-                else if(typeof(ch)==='object'){
-                    key=ch;
-                    if(key.ctrl===undefined)key.ctrl=false;
-                    if(key.meta===undefined)key.meta=false;
-                    if(key.shift===undefined)key.shift=false;
-                }
-                ch=undefined;
-            }
-            if/*ctrl+c*/(key.name==='c'&&key.ctrl===true&&key.meta===false&&key.shift===false)config.process.exit();
-            else if(ppos>-1&&prmt[ppos].any===true)popPrompt();
-            else/*up*/if(key.name==='up'&&key.ctrl===false&&key.meta===false&&key.shift===false)scrollHist(-1);
-            else/*down*/if(key.name==='down'&&key.ctrl===false&&key.meta===false&&key.shift===false)scrollHist(1);
-            else/*ctrl+z*/if(key.name==='z'&&key.ctrl===true&&key.meta===false&&key.shift===false)redo(-1);
-            else/*ctrl+y*/if(key.name==='y'&&key.ctrl===true&&key.meta===false&&key.shift===false)redo(1);
-            else/*escape*/if(key.name==='escape'&&key.ctrl===false&&key.shift===false){
-                if(prmt.length>0)popPrompt(true);
-                else{
-                    curr.line=curr.undo[curr.upos];
-                    hpos=hist.length-1;
-                    render();
-                }
-            }
-            else/*backspace*/if(key.name==='backspace'&&key.ctrl===false&&key.meta===false&&key.shift===false){
-                if(prmt.length===0&&hpos<hist.length-1){
-                    curr.line=hist[hpos];
-                    hpos=hist.length-1;
-                }
-                if(curr.line.length>0){
-                    curr.line=curr.line.substring(0,curr.line.length-1);
-                    setUndo();
-                    render();
-                }
-            }
-            else/*return*/if(key.name==='return'&&key.ctrl===false&&key.meta===false&&key.shift===false){
-                hpos=hist.length-1;
-                if(curr.line.length>0&&hist[hist.length-2]!==curr.line){
-                    hist[hpos++]=curr.line;
-                    hist[hpos]='';
-                    if(hist.length>config.history+1)hist.splice(0,hist.length-config.history-1);
-                }
-                if(ppos>-1)popPrompt();
-                else if(curr.line.length>0){
-                        curr.line='';
-                        curr.upos=0;
-                        curr.undo=[''];
-                        render(true);
-                    }
-                else if(typeof(config.onLine)==='function')config.onLine('');
-            }
-            else if(key.sequence.length===1){
-                curr.line+=key.sequence;
-                render();
-            }
-            if(curr===std)config.line=curr.line;
-            if(ch!==undefined&&typeof(config.onKey)==='function')config.onKey(key);
-        };
-        //===========================================================================================================
-        if(config.process.stdout.fwrite===undefined)config.process.stdout.fwrite=config.process.stdout.write;
-        config.process.stdout.write=function(chunk,encoding,cb){
-            config.process.stdout.fwrite(clear+config.escape+`[${config.process.stdout.columns}D`+chunk+disp+''+config.escape+'[0m',encoding,cb);
-        };
-        if(config.process.fexit===undefined)config.process.fexit=config.process.exit;
-        config.process.exit=function(code){
-            if(typeof(config.onExit)==='function')config.onExit(code);
-            config.process.stdout.fwrite(clear+config.escape+`[${config.process.stdout.columns}D${config.escape}[0m${config.escape}[?25h`,null,()=>config.process.fexit(code));
-        };
-        require('readline').emitKeypressEvents(config.process.stdin);
-        if(config.process.stdin.isTTY)config.process.stdin.setRawMode(true);
-        config.process.stdin.removeListener('keypress',keyme);
-        config.process.stdin.on('keypress',keyme);
-        //===========================================================================================================
-        config.process.stdout.write(config.escape+'[?25l'+config.escape+'[30m\033]0;fstdin\007');
-        config.key=function(key={name:'',sequence:'',ctrl:false,meta:false,shift:false}){
-            keyflag=true;
-            for(let i=0;i<arguments.length;i++){
-                if(i===arguments.length-1)keyflag=false;
-                keyme(arguments[i]);
-            }
-        };
-        config.prompt=function(query={line:'',font:config.textClr,func:(res)=>{}}){
-            return promptme(Array.from(arguments));
-        };
-        config.font=function(int=0){return clrf(int);}
-        config.back=function(int=0){return clrb(int);}
-        return config;
+
+const std_prompt={
+    line:''
+    ,any_key:false
+    ,color:std_config.text_color
+    ,root:false
+    ,mask:false
+    ,func:(response='',escape=false)=>{}
+};
+
+const std_key={
+    name:''
+    ,sequence:''
+    ,ctrl:false
+    ,meta:false
+    ,shift:false
+};
+
+const _return={
+    line:''
+    ,key:function key(key=std_key){
+        for(let i=0;i<arguments.length;i++)
+            key_me_config(arguments[i]);
+    }
+    ,prompt:function prompt(query=std_prompt){
+        return prompt_me_config(arguments);
     }
 };
-//================================================================================================================sdg
-module.exports=function(config=stdconst){return fstdin(config);}
+
+let init=true;
+let history_arr=[''];
+let history_pos=0;
+let prompts_arr=[];
+let prompt_pos=-1;
+let std_in={line:'',undo:[''],undo_pos:0};
+let prompt={line:'',undo:[''],undo_pos:0};
+let current=std_in;
+let root_prompt=undefined;
+let display='';
+let clear='';
+let mask_hold='';
+
+//key_press wrapper for resetting config
+let key_press_func=()=>{};
+
+//key_me wrapper for resetting config
+let key_me_config=(key)=>key_me(key,undefined,std_config);
+
+//prompt_me wrapper for resetting config
+let prompt_me_config=(prompts)=>prompt_me(prompts,std_config);
+
+function check_config(config){
+    if(config!==std_config){
+        for(let i in std_config){
+            if(config[i]===undefined
+            ||typeof(config[i])!==typeof(std_config[i]))
+                config[i]=std_config[i];
+        }
+        display=colour_back(config.cursor_color,config.escape)+' '+colour_fore(-1,config.escape);
+        clear=config.escape+'[2K';
+    }
+};
+
+function colour_fore(int=0,escape=std_config.escape){
+    let ret=escape;
+    if(0<=int&&int<256)ret+=`[38;5;${int}m`;
+    else ret+='[0m';
+    return ret;
+};
+
+function colour_back(int=0,escape=std_config.escape){
+    let ret=escape;
+    if(0<=int&&int<256)ret+=`[48;5;${int}m`;
+    else ret+='[0m';
+    return ret;
+};
+
+function set_clear(escape,count){
+    //set line count to clear
+    clear=escape+'[2K';
+    while(1<count--)clear+=escape+'[1A'+escape+'[2K';
+};
+
+function set_undo(){
+    //log keystroke for undo list
+    if((history_pos<history_arr.length-1
+        &&current.line!==history_arr[history_pos])
+    ||current.line!==current.undo[current.undo_pos]){
+        current.undo_pos++;
+        current.undo[current.undo_pos]=current.line;            
+    }
+};
+
+function scroll_history(count,config){
+    //scroll 'entered' input history_arr
+    history_pos+=count;
+    if(history_pos<0)history_pos=0;
+    else if(history_arr.length-1<history_pos)history_pos=history_arr.length-1;
+    current.line=history_arr[history_pos];
+    set_undo();
+    render(false,config);
+};
+
+function set_redo(count,config){
+    //redo previous from undo list
+    current.undo_pos+=count;
+    if(current.undo_pos>current.undo.length-1)current.undo_pos=current.undo.length-1;
+    else if(current.undo_pos<0)current.undo_pos=0;
+    current.line=current.undo[current.undo_pos];
+    history_pos=history_arr.length-1;
+    render(false,config);
+};
+
+function pop_prompt(escape=false,config){
+    //temp store prompt response
+    let line='';
+
+    //if using mask and mask_hold has data, store data (unmasked) and reset mask_hold
+    if(is_mask_enabled()){
+        if(!escape)line=mask_hold;
+        mask_hold='';
+    }
+    else line=prompt.line;
+
+    //clear working prompt data
+    prompt={line:'',undo:[''],undo_pos:0};
+
+    //call prompt response func
+    prompts_arr[prompt_pos].func(line,escape);
+
+    //end of prompts_arr
+    if(++prompt_pos===prompts_arr.length){
+        //discard prompts_arr data
+        prompts_arr.length=0;
+        //root prompt exists? push to prompts_arr[0]
+        if(root_prompt!==undefined){
+            prompts_arr[prompts_arr.length++]=root_prompt;
+            //set iterator to first position
+            prompt_pos=0;
+        }
+        //set iterator to none
+        else prompt_pos=-1;
+    }
+
+    //render changes
+    render(false,config);
+};
+
+function check_prompt_props(prompt){
+    let out=false;
+
+    if(typeof(prompt)==='object'){
+        out=true;
+        if(prompt!==std_prompt){
+
+            for(let i in std_prompt){
+                if(prompt[i]===undefined
+                ||typeof(prompt[i])!==typeof(std_prompt[i]))
+                    prompt[i]=std_prompt[i];
+            }
+
+            //for newline marking
+            prompt.new=1;
+            prompt.newpos=[];
+        }
+    }
+
+    return out;
+};
+
+function prompt_me(prompts=[],config){
+    //intake and display prompts
+    for(let i=0;i<prompts.length;i++){
+        if(check_prompt_props(prompts[i])){
+
+            //count & record position of explicit newlines
+            for(let j=prompts[i].line.length-1;j>=0;j--){
+                if(prompts[i].line[j]==='\n'){
+                    prompts[i].new++;
+                    prompts[i].newpos[prompts[i].newpos.length++]=j;
+                }
+            }
+
+            //if is root, store in root object
+            if(prompts[i].root===true)root_prompt=prompts[i];
+
+            //store prompts
+            prompts_arr[prompts_arr.length++]=prompts[i];
+        }
+    }
+
+    //if 1+ prompts stored
+    if(prompts_arr.length>0){
+
+        //go to first
+        if(prompt_pos===-1)prompt_pos=0;
+
+        //or advance next after root
+        else if(prompts_arr[prompt_pos]===root_prompt){
+            prompt_pos++;
+            prompt={line:'',undo:[''],undo_pos:0};
+        }
+
+        //render prompts
+        render(false,config);
+    }
+};
+
+function render(before=false,config){
+    //line formatting for terminal view
+    let extclear=0;
+    let extcolumns=0;
+    display='';
+
+    //prompt: known newlines & overflow newlines formatting
+    if(-1<prompt_pos){
+        current=prompt;
+        let pline=prompts_arr[prompt_pos].line;
+
+        //known newlines extended clear line counter
+        if(prompts_arr[prompt_pos].new>1){
+            for(let i=prompts_arr[prompt_pos].newpos.length-1,oldpos=i;i>=0;i--){
+                let temprompt_pos=prompts_arr[prompt_pos].newpos[i]-oldpos;
+                let num=Math.floor((temprompt_pos)/(process.stdout.columns-1));
+                extclear+=num;
+                oldpos=prompts_arr[prompt_pos].newpos[i];
+            }
+            if(process.stdout.columns-1<=pline.length-prompts_arr[prompt_pos].newpos[0]+current.line.length){
+                extcolumns=pline.length-prompts_arr[prompt_pos].newpos[0];
+            }
+        }
+        
+        //is prompt line longer than terminal columns?
+        else if(process.stdout.columns-1<=prompts_arr[prompt_pos].line.length){
+            let last=0;
+            pline='';
+
+            //extended clear line counter and overflow newline insertion
+            for(let i=0,mark=0;i<prompts_arr[prompt_pos].line.length;i++){
+                if(i-mark===process.stdout.columns-1){
+                    pline+='\n';
+                    extclear++;
+                    mark=i;
+                    last=0;
+                }
+                pline+=prompts_arr[prompt_pos].line[i];
+                last++;
+            }
+
+            if(process.stdout.columns-1<=last+current.line.length)extcolumns=last;
+        }
+
+        else if(process.stdout.columns-1<=pline.length+current.line.length){
+            extcolumns=pline.length;
+        }
+        //set display line to be written
+        display=colour_fore(prompts_arr[prompt_pos].color,config.escape)+pline;
+    }
+    //no prompts
+    else current=std_in;
+
+    //add to display line to be written
+    display+=colour_fore(config.text_color,config.escape)
+            +((process.stdout.columns-extcolumns-1>current.line.length)?
+                current.line
+                :current.line.substring(
+                    current.line.length
+                    -process.stdout.columns
+                    +extcolumns+1
+                )
+            )
+            +colour_back(config.cursor_color,config.escape)
+            +' '
+            +colour_fore(-1,config.escape);
+
+    //set current line in history_arr
+    if(current.line.length>0
+    &&history_pos===history_arr.length-1)
+        history_arr[history_arr.length-1]=current.line;
+
+    //write previous input line, 'enter' pressed 
+    if(before===true){
+        process.stdout.write(
+            colour_fore(config.text_color,config.escape)
+            +history_arr[history_arr.length-2]
+            +'\n'
+            ,(err)=>{
+                if(err)console.error(err);
+                else{
+                    //send input line to user
+                    config.on_line(history_arr[history_arr.length-2]);
+                    //set lines to clear for next prompt
+                    set_clear(
+                        config.escape
+                        ,(-1<prompt_pos)?
+                            prompts_arr[prompt_pos].new+extclear
+                            :1
+                    );
+                }
+            }
+        );
+    }
+
+    //write current input line, input not sent to user
+    else process.stdout.write(
+        ''
+        ,(err)=>{
+            if(err)console.error(err);
+            //set lines to clear for next prompt
+            else set_clear(
+                config.escape
+                ,(-1<prompt_pos)?
+                    prompts_arr[prompt_pos].new+extclear
+                    :1
+            );
+        }
+    );
+};
+
+function is_mask_enabled(){
+    return (prompt_pos>-1&&prompts_arr[prompt_pos].mask);
+};
+
+function key_me(ch,key,config){
+    //check key for correct type
+    if(key===undefined){
+        if(typeof(ch)==='string')key={name:''+ch,sequence:''+ch,ctrl:false,meta:false,shift:false};
+        else if(typeof(ch)==='object'){
+            key=ch;
+            if(key.ctrl===undefined)key.ctrl=false;
+            if(key.meta===undefined)key.meta=false;
+            if(key.shift===undefined)key.shift=false;
+        }
+        ch=undefined;
+    }
+    
+    if/*ctrl+c*/(key.name==='c'&&key.ctrl===true&&key.meta===false&&key.shift===false)process.exit();
+
+    else if(prompt_pos>-1&&prompts_arr[prompt_pos].any_key===true)pop_prompt(false,config);
+
+    else/*up*/if(key.name==='up'&&key.ctrl===false&&key.meta===false&&key.shift===false){
+        if(!is_mask_enabled())scroll_history(-1,config);
+    }
+
+    else/*down*/if(key.name==='down'&&key.ctrl===false&&key.meta===false&&key.shift===false){
+        if(!is_mask_enabled())scroll_history(1,config);
+    }
+
+    else/*ctrl+z*/if(key.name==='z'&&key.ctrl===true&&key.meta===false&&key.shift===false){
+        if(!is_mask_enabled())set_redo(-1,config);
+    }
+
+    else/*ctrl+y*/if(key.name==='y'&&key.ctrl===true&&key.meta===false&&key.shift===false){
+        if(!is_mask_enabled())set_redo(1,config);
+    }
+
+    else/*escape*/if(key.name==='escape'&&key.ctrl===false&&key.shift===false){
+        if(prompts_arr.length>0)pop_prompt(true,config);
+        else{
+            current.line=current.undo[current.undo_pos];
+            history_pos=history_arr.length-1;
+            render(false,config);
+        }
+    }
+
+    else/*backspace*/if(key.name==='backspace'&&key.ctrl===false&&key.meta===false&&key.shift===false){
+        if(prompts_arr.length===0&&history_pos<history_arr.length-1){
+            current.line=history_arr[history_pos];
+            history_pos=history_arr.length-1;
+        }
+        if(current.line.length>0){
+            current.line=current.line.substring(0,current.line.length-1);
+            if(is_mask_enabled())mask_hold=mask_hold.substring(0,mask_hold.length-1);
+            else set_undo();
+            render(false,config);
+        }
+    }
+
+    else/*return*/if(key.name==='return'&&key.ctrl===false&&key.meta===false&&key.shift===false){
+        history_pos=history_arr.length-1;
+        if(current.line.length>0&&history_arr[history_arr.length-2]!==current.line){
+            history_arr[history_pos++]=current.line;
+            history_arr[history_pos]='';
+            if(history_arr.length>config.input_history+1)history_arr.splice(0,history_arr.length-config.input_history-1);
+        }
+        if(prompt_pos>-1)pop_prompt(false,config);
+        else if(current.line.length>0){
+                current.line='';
+                current.undo_pos=0;
+                current.undo=[''];
+                render(true,config);
+            }
+        else config.on_line('');
+    }
+
+    else if(key.sequence.length===1){
+        if(is_mask_enabled()){
+            current.line+=config.mask_char;
+            mask_hold+=key.sequence;
+        }
+        else {
+            current.line+=key.sequence;
+            set_undo();
+        }
+        render(false,config);
+    }
+
+    //set read-only line for user
+    _return.line=current.line;
+
+    //key is not from user, send key to user
+    if(ch!==undefined){
+        //if mask disabled send key
+        if(!is_mask_enabled())config.on_key(key);
+    }
+};
+
+function set_key_func(config){
+    //set key press func with config
+    process.stdin.setRawMode(true);
+    require('readline').emitKeypressEvents(process.stdin);
+    process.stdin.removeListener('keypress',key_press_func);
+    key_press_func=(ch,key)=>key_me(ch,key,config);
+    process.stdin.on('keypress',key_press_func);
+};
+
+function set_exit(config){
+    //set exit func with config
+    if(process.fexit===undefined)process.fexit=process.exit;
+    process.exit=function(code){
+        config.on_exit(code);
+        process.stdout.fwrite(
+            clear
+            +config.escape
+            +`[${process.stdout.columns}D${colour_fore(-1,config.escape)}${config.escape}[?25h`
+            ,null
+            ,()=>process.fexit(code)
+        );
+    };
+};
+
+function set_write(config){
+    //set write func with config
+    if(process.stdout.fwrite===undefined)process.stdout.fwrite=process.stdout.write;
+
+    process.stdout.write=function(chunk,encoding,cb){
+        process.stdout.fwrite(
+            clear
+            +config.escape
+            +`[${process.stdout.columns}D`+chunk+display+colour_fore(-1,config.escape)
+            ,encoding
+            ,cb
+        );
+    };
+};
+
+function set_title(config){
+    //set terminal title and clear line, first render
+    if(init)process.stdout.write(config.escape+'[?25l'+config.escape+'[30m\033]0;fstdin\007');
+    else render(false,config);
+};
+
+function set_key_config(config){
+    key_me_config=(key)=>key_me(key,undefined,config);
+};
+
+function set_prompt_config(config){
+    prompt_me_config=(prompts)=>prompt_me(prompts,config);
+};
+
+module.exports=function fstdin(config=std_config){
+    check_config(config);
+
+    set_title(config);
+
+    set_write(config);
+
+    set_exit(config);
+    
+    set_key_func(config);
+
+    set_key_config(config);
+
+    set_prompt_config(config);
+
+    init=false;
+
+    return _return;
+};

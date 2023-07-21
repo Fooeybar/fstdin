@@ -1,9 +1,24 @@
+function colour_fore(int=0,escape=std_config.escape){
+    let ret=escape;
+    if(0<=int&&int<256)ret+=`[38;5;${int}m`;
+    else ret+='[0m';
+    return ret;
+};
+
+function colour_back(int=0,escape=std_config.escape){
+    let ret=escape;
+    if(0<=int&&int<256)ret+=`[48;5;${int}m`;
+    else ret+='[0m';
+    return ret;
+};
+
 const std_config={
     text_color:15
    ,cursor_color:15
    ,input_history:50
    ,escape:'\x1b'
    ,mask_char:'*'
+   ,title:'fstdin'
    ,on_exit:function(code=0){}
    ,on_line:function(line=''){}
    ,on_key:function(key={sequence:'',name:'',ctrl:false,meta:false,shift:false}){}
@@ -35,6 +50,8 @@ const _return={
     ,prompt:function prompt(query=std_prompt){
         return prompt_me_config(arguments);
     }
+    ,colour_fore
+    ,colour_back
 };
 
 let init=true;
@@ -69,20 +86,6 @@ function check_config(config){
         display=colour_back(config.cursor_color,config.escape)+' '+colour_fore(-1,config.escape);
         clear=config.escape+'[2K';
     }
-};
-
-function colour_fore(int=0,escape=std_config.escape){
-    let ret=escape;
-    if(0<=int&&int<256)ret+=`[38;5;${int}m`;
-    else ret+='[0m';
-    return ret;
-};
-
-function colour_back(int=0,escape=std_config.escape){
-    let ret=escape;
-    if(0<=int&&int<256)ret+=`[48;5;${int}m`;
-    else ret+='[0m';
-    return ret;
 };
 
 function set_clear(escape,count){
@@ -205,11 +208,8 @@ function prompt_me(prompts=[],config){
         //go to first
         if(prompt_pos===-1)prompt_pos=0;
 
-        //or advance next after root
-        else if(prompts_arr[prompt_pos]===root_prompt){
-            prompt_pos++;
-            prompt={line:'',undo:[''],undo_pos:0};
-        }
+        //or clear for next prompt to display
+        else if(prompts_arr[prompt_pos]===root_prompt)prompt={line:'',undo:[''],undo_pos:0};
 
         //render prompts
         render(false,config);
@@ -386,7 +386,7 @@ function key_me(ch,key,config){
         }
     }
 
-    else/*return*/if(key.name==='return'&&key.ctrl===false&&key.meta===false&&key.shift===false){
+    else/*return*/if((key.name==='return'||key.name==='enter')&&key.ctrl===false&&key.meta===false&&key.shift===false){
         history_pos=history_arr.length-1;
         if(current.line.length>0&&history_arr[history_arr.length-2]!==current.line){
             history_arr[history_pos++]=current.line;
@@ -466,7 +466,7 @@ function set_write(config){
 
 function set_title(config){
     //set terminal title and clear line, first render
-    if(init)process.stdout.write(config.escape+'[?25l'+config.escape+'[30m\033]0;fstdin\007');
+    if(init)process.stdout.write(config.escape+'[?25l'+config.escape+'[30m\033]0;'+config.title+'\007');
     else render(false,config);
 };
 
